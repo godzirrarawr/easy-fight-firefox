@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name        Newest easy-fight (All-in-one version)
 // @namespace   seintz.torn.easy-fight
-// @version     2.4
-// @description move start fight and outcome button for easy click. Includes All-in-One and specific weapon options.
+// @version     2.5
+// @description move start fight, outcome and continue buttons for easy click. Includes All-in-One and specific weapon options.
 // @author      seintz [2460991], Finaly [2060206], Anxiety [2149726], Brother [2590792]
 // @license     GNU GPLv3
 // @run-at      document-end
@@ -89,13 +89,18 @@
         const buttons = [...box.children];
         const texts = buttons.map((b) => (b.textContent || '').trim().toLowerCase());
         const isOutcome = texts.some((t) => OUTCOME_TEXTS.includes(t));
-        const state = (isOutcome ? 'outcome:' : 'fight:') + settings.outcome + ':' + texts.join('|');
+        const isContinue = !isOutcome && texts.includes('continue');
+        const phase = isOutcome ? 'outcome:' : isContinue ? 'continue:' : 'fight:';
+        const state = phase + settings.outcome + ':' + texts.join('|');
         if (box.dataset.efState === state) return; // nothing changed since last pass
         box.dataset.efState = state;
 
         const wanted = OUTCOME_INDEX[settings.outcome];
         buttons.forEach((btn, i) => {
-            const move = isOutcome ? i === wanted : texts[i].includes('fight');
+            // fight -> chosen outcome -> continue all land in the same spot
+            const move = isOutcome ? i === wanted
+                : isContinue ? texts[i] === 'continue'
+                : texts[i].includes('fight');
             btn.classList.toggle(MOVED, move);
             btn.style.display = isOutcome && !move ? 'none' : '';
         });
