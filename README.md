@@ -12,7 +12,12 @@ Changes in this version:
   instead of waiting for `load`, and falls back to localStorage when `GM_*` isn't available.
 - Settings changes apply right away, with no reload.
 - Runs on both attack URLs: `loader.php?sid=attack` and `page.php?sid=attack`.
+- Works in TornPDA: ignores bad values from PDA's GM shims, won't double-load, and the
+  settings panel folds away (tap the ⚔ Easy Fight header; starts folded on phones).
 
 ## Install
 Open `easy-fight.user.js` in Tampermonkey/Violentmonkey (or paste it into a new
 script in the editor) and save.
+
+**TornPDA:** Settings → Advanced browser settings → Manage scripts → **+**, paste the
+whole script, and save. It picks up the `@match` lines, so it runs on attack pages.

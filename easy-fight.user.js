@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Newest easy-fight (All-in-one version)
 // @namespace   seintz.torn.easy-fight
-// @version     2.5
+// @version     2.6
 // @description move start fight, outcome and continue buttons for easy click. Includes All-in-One and specific weapon options.
 // @author      seintz [2460991], Finaly [2060206], Anxiety [2149726], Brother [2590792]
 // @license     GNU GPLv3
@@ -35,10 +35,25 @@
         },
     };
 
+    // TornPDA can inject the same script twice into one page; only run once.
+    if (window.__easyFightLoaded) return;
+    window.__easyFightLoaded = true;
+
+    // Validate stored values: some managers' GM shims (e.g. TornPDA) can hand back
+    // promises or strings instead of the stored value.
+    function pick(key, def, allowed) {
+        let v = store.get(key, def);
+        if (typeof def === 'boolean' && typeof v === 'string') v = v === 'true';
+        if (allowed ? !allowed.includes(v) : typeof v !== typeof def) return def;
+        return v;
+    }
+
+    const isPhone = window.innerWidth <= 600;
     const settings = {
-        outcome: store.get('outcome', 'leave'),
-        weapon: store.get('defaultWeapon', 'all'),
-        useTemp: store.get('useTemp', true),
+        outcome: pick('outcome', 'leave', ['leave', 'mug', 'hosp']),
+        weapon: pick('defaultWeapon', 'all', ['all', 'primary', 'secondary', 'melee']),
+        useTemp: pick('useTemp', true),
+        collapsed: pick('panelCollapsed', isPhone), // start folded up on phones
     };
 
     const OUTCOME_INDEX = { leave: 0, mug: 1, hosp: 2 };
@@ -48,9 +63,9 @@
 
     // ---- styling: one <style> element, rewritten only when settings change.
     // Breakpoints: mobile <=600px, tablet <=1000px, desktop above.
-    const styleEl = document.createElement('style');
+    const styleEl = document.getElementById('easyfight-style') || document.createElement('style');
     styleEl.id = 'easyfight-style';
-    (document.head || document.documentElement).appendChild(styleEl);
+    if (!styleEl.isConnected) (document.head || document.documentElement).appendChild(styleEl);
 
     function buildCss() {
         const left = ['-100px', '-140px', '-150px'];
@@ -125,8 +140,10 @@
         if (document.getElementById('parameterUI')) return;
         const ui = document.createElement('div');
         ui.id = 'parameterUI';
-        ui.style.cssText = 'position: fixed; top: 210px; left: 10px; z-index: 999; background-color: #333; color: white; padding: 10px; border: 2px solid #555; border-radius: 5px; font-family: Arial, sans-serif;';
+        ui.style.cssText = 'position: fixed; top: 210px; left: 10px; z-index: 999; background-color: #333; color: white; padding: 6px 10px; border: 2px solid #555; border-radius: 5px; font-family: Arial, sans-serif; font-size: 13px; max-width: 170px;';
         ui.innerHTML = `
+            <div id="efToggle" style="cursor: pointer; user-select: none; font-weight: bold;"></div>
+            <div id="efBody" style="margin-top: 8px;">
             <div style="margin-bottom: 10px;">
                 <label for="outcomeSelect" style="display: block; margin-bottom: 5px;">Attack Outcome:</label>
                 <select id="outcomeSelect" style="width: 100%; padding: 5px;">
@@ -148,8 +165,23 @@
                 <label for="useTempCheckbox" style="display: flex; align-items: center;">
                     <input type="checkbox" id="useTempCheckbox" style="margin-right: 5px;"> Use Temporary
                 </label>
+            </div>
             </div>`;
         document.body.appendChild(ui);
+
+        // Tap the header to fold the panel away (it covers a lot of a phone screen).
+        const toggle = ui.querySelector('#efToggle');
+        const body = ui.querySelector('#efBody');
+        const renderCollapsed = () => {
+            body.style.display = settings.collapsed ? 'none' : '';
+            toggle.textContent = settings.collapsed ? '⚔ Easy Fight ▸' : '⚔ Easy Fight ▾';
+        };
+        renderCollapsed();
+        toggle.addEventListener('click', () => {
+            settings.collapsed = !settings.collapsed;
+            store.set('panelCollapsed', settings.collapsed);
+            renderCollapsed();
+        });
 
         const outcomeSel = ui.querySelector('#outcomeSelect');
         const weaponSel = ui.querySelector('#weaponSelect');
